@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.21)
+CMAKE_MINIMUM_REQUIRED(VERSION 3.16)
 PROJECT(ClienServerEcn)
 
 FIND_PACKAGE(Boost 1.40 COMPONENTS system REQUIRED)
@@ -7,7 +7,7 @@ INCLUDE_DIRECTORIES(${Boost_INCLUDE_DIR})
 
 SET(CMAKE_CXX_STANDARD 17)
 
-ADD_EXECUTABLE(Server Server.cpp Common.hpp json.hpp)
+ADD_EXECUTABLE(Server Server.cpp Common.hpp json.hpp User.cpp)
 TARGET_LINK_LIBRARIES(Server PRIVATE Threads::Threads ${Boost_LIBRARIES})
 
 ADD_EXECUTABLE(Client Client.cpp Common.hpp json.hpp)

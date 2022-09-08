@@ -4,6 +4,7 @@
 #include <boost/asio.hpp>
 #include "json.hpp"
 #include "Common.hpp"
+#include "User.h"
 
 using boost::asio::ip::tcp;
 
@@ -33,9 +34,36 @@ public:
         }
     }
 
+    std::string RegisterNewUser(const std::string& login, const std::string& pass) {
+        nlohmann::json msg;
+        if (userTable.isUserInTable(login)) {
+            msg["err"] = Errors::LoginExists;
+        } else {
+            msg["err"] = Errors::NoError;
+            msg["uid"] = std::to_string(userTable.addUser(login, pass));
+        }
+        return msg.dump();
+    }
+
+    std::string TryLogin(const std::string& login, const std::string& pass) {
+        nlohmann::json msg;
+        if (!userTable.isUserInTable(login)) {
+            msg["err"] = Errors::LoginDoesntExist;
+        }
+        else if (!userTable.isUserDataCorrect(login, pass)) {
+            msg["err"] = Errors::WrongPass;
+        }
+        else {
+            msg["err"] = Errors::NoError;
+            msg["uid"] = std::to_string(userTable.getUid(login));
+        }
+        return msg.dump();
+    }
+
 private:
     // <UserId, UserName>
     std::map<size_t, std::string> mUsers;
+    UserTable userTable;
 };
 
 Core& GetCore()
@@ -69,8 +97,7 @@ public:
     void handle_read(const boost::system::error_code& error,
         size_t bytes_transferred)
     {
-        if (!error)
-        {
+        if (!error) {
             data_[bytes_transferred] = '\0';
 
             // Парсим json, который пришёл нам в сообщении.
@@ -78,17 +105,23 @@ public:
             auto reqType = j["ReqType"];
 
             std::string reply = "Error! Unknown request type";
-            if (reqType == Requests::Registration)
-            {
+            if (reqType == Requests::Registration) {
                 // Это реквест на регистрацию пользователя.
                 // Добавляем нового пользователя и возвращаем его ID.
                 reply = GetCore().RegisterNewUser(j["Message"]);
             }
-            else if (reqType == Requests::Hello)
-            {
+            else if (reqType == Requests::Hello) {
                 // Это реквест на приветствие.
                 // Находим имя пользователя по ID и приветствуем его по имени.
                 reply = "Hello, " + GetCore().GetUserName(j["UserId"]) + "!\n";
+            }
+            else if (reqType == Requests::Reg) {
+                auto msg = nlohmann::json::parse(static_cast<std::string>(j["Message"]));
+                reply = GetCore().RegisterNewUser(msg["login"], msg["password"]);
+            }
+            else if (reqType == Requests::Login) {
+                auto msg = nlohmann::json::parse(static_cast<std::string>(j["Message"]));
+                reply = GetCore().TryLogin(msg["login"], msg["password"]);
             }
 
             boost::asio::async_write(socket_,
@@ -96,8 +129,7 @@ public:
                 boost::bind(&session::handle_write, this,
                     boost::asio::placeholders::error));
         }
-        else
-        {
+        else {
             delete this;
         }
     }

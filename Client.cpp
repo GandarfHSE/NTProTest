@@ -1,10 +1,13 @@
 #include <iostream>
+#include <string>
 #include <boost/asio.hpp>
 
 #include "Common.hpp"
 #include "json.hpp"
 
 using boost::asio::ip::tcp;
+
+const std::string FAKE_ID = "fake_id";
 
 // Отправка сообщения на сервер по шаблону.
 void SendMessage(
@@ -44,6 +47,71 @@ std::string ProcessRegistration(tcp::socket& aSocket)
     return ReadMessage(aSocket);
 }
 
+std::string RegistrationCallback(tcp::socket& aSocket) {
+    std::string name, pass, pass2;
+    std::cout << "Enter your login: ";
+    std::cin >> name;
+    while (true) {
+        std::cout << "Enter your password: ";
+        std::cin >> pass;
+        std::cout << "Enter your password again: ";
+        std::cin >> pass2;
+
+        if (pass == pass2) {
+            break;
+        }
+
+        std::cout << "Sorry, passwords do not match. Try again\n";
+    }
+
+    nlohmann::json msg;
+    msg["login"] = name;
+    msg["password"] = pass;
+    SendMessage(aSocket, "0", Requests::Reg, msg.dump());
+
+    auto reply = nlohmann::json::parse(ReadMessage(aSocket));
+    if (reply["err"] == Errors::NoError) {
+        std::cout << "Registration successfully complete, " << name << '\n';
+        return reply["uid"];
+    } 
+    else if (reply["err"] == Errors::LoginExists) {
+        std::cout << "Sorry, user with this login already exists. Log-in or register with another login\n";
+    }
+    else {
+        std::cout << "Something strange have occured. Contact administrator. Error: REG_ERROR\n";
+    }
+    return FAKE_ID;
+}
+
+std::string LoginCallback(tcp::socket& aSocket) {
+    std::string name, pass;
+    std::cout << "Enter your login: ";
+    std::cin >> name;
+    std::cout << "Enter your password: ";
+    std::cin >> pass;
+
+    nlohmann::json msg;
+    msg["login"] = name;
+    msg["password"] = pass;
+    SendMessage(aSocket, "0", Requests::Login, msg.dump());
+
+    auto reply = nlohmann::json::parse(ReadMessage(aSocket));
+    if (reply["err"] == Errors::NoError) {
+        std::cout << "Login successfully complete, " << name << '\n';
+        return reply["uid"];
+    }
+    else if (reply["err"] == Errors::WrongPass) {
+        std::cout << "Wrong password. Register new account or try another password\n";
+    }
+    else if (reply["err"] == Errors::LoginDoesntExist) {
+        std::cout << "Login doesn't exist. Register new account or try another login\n";
+    }
+    else {
+        std::cout << "Something strange have occured. Contact administrator. Error: LOGIN_ERROR\n";
+    }
+    return FAKE_ID;
+}
+
 int main()
 {
     try
@@ -57,10 +125,33 @@ int main()
         tcp::socket s(io_service);
         s.connect(*iterator);
 
-        // Мы предполагаем, что для идентификации пользователя будет использоваться ID.
-        // Тут мы "регистрируем" пользователя - отправляем на сервер имя, а сервер возвращает нам ID.
-        // Этот ID далее используется при отправке запросов.
-        std::string my_id = ProcessRegistration(s);
+        std::string my_id = "fake_id";
+
+        while (my_id == FAKE_ID) {
+            std::cout << "Greetings! Please, register or login\n"
+                         "1) Register new account\n"
+                         "2) Login to existing account\n"
+                      << std::endl;
+
+            short menu_option;
+            std::cin >> menu_option;
+            switch (menu_option) {
+                case 1:
+                {
+                    my_id = RegistrationCallback(s);
+                    break;
+                }
+                case 2:
+                {
+                    my_id = LoginCallback(s);
+                    break;
+                }
+                default:
+                {
+                    std::cout << "Unknown menu option\n";
+                }
+            }
+        }
 
         while (true)
         {
