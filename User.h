@@ -6,28 +6,28 @@
 
 class User {
 public:
-    std::string getLogin() {
+    std::string getLogin() const {
         return login;
     }
 
-    size_t getUid() {
+    size_t getUid() const {
         return uid;
     }
 
-    long long getUsdBalance() {
+    long long getUsdBalance() const {
         return usdBalance;
     }
 
-    long long getRubBalance() {
+    long long getRubBalance() const {
         return rubBalance;
     }
 
-    void setUsdBalance(long long newBalance) {
-        usdBalance = newBalance;
+    void addUsd(long long volume) {
+        usdBalance += volume;
     }
 
-    void setRubBalance(long long newBalance) {
-        rubBalance = newBalance;
+    void addRub(long long volume) {
+        rubBalance += volume;
     }
 
     User(size_t uid, std::string login, std::string password):
@@ -42,7 +42,7 @@ public:
 
     }
     
-    bool isPasswordCorrect(std::string pass) {
+    bool isPasswordCorrect(std::string pass) const {
         return password == pass;
     }
 
@@ -62,7 +62,17 @@ public:
 
     bool isUserInTable(std::string login);
 
+    bool isUserInTable(size_t uid);
+
     bool isUserDataCorrect(std::string login, std::string password);
+
+    bool addUsdToUser(size_t uid, long long volume);
+
+    bool addRubToUser(size_t uid, long long volume);
+
+    long long getUserUsdBalance(size_t uid);
+
+    long long getUserRubBalance(size_t uid);
 
 private:
     size_t maxUid = 1;

@@ -1,9 +1,15 @@
 #include <cstdlib>
 #include <iostream>
+#include <memory>
+#include <set>
+#include <string>
+
 #include <boost/bind/bind.hpp>
 #include <boost/asio.hpp>
+
 #include "json.hpp"
 #include "Common.hpp"
+#include "deal.h"
 #include "User.h"
 
 using boost::asio::ip::tcp;
@@ -11,29 +17,6 @@ using boost::asio::ip::tcp;
 class Core
 {
 public:
-    // "Регистрирует" нового пользователя и возвращает его ID.
-    std::string RegisterNewUser(const std::string& aUserName)
-    {
-        size_t newUserId = mUsers.size();
-        mUsers[newUserId] = aUserName;
-
-        return std::to_string(newUserId);
-    }
-
-    // Запрос имени клиента по ID
-    std::string GetUserName(const std::string& aUserId)
-    {
-        const auto userIt = mUsers.find(std::stoi(aUserId));
-        if (userIt == mUsers.cend())
-        {
-            return "Error! Unknown User";
-        }
-        else
-        {
-            return userIt->second;
-        }
-    }
-
     std::string RegisterNewUser(const std::string& login, const std::string& pass) {
         nlohmann::json msg;
         if (userTable.isUserInTable(login)) {
@@ -60,10 +43,85 @@ public:
         return msg.dump();
     }
 
+    std::string TryBuy(size_t uid, long long volume, long long cost) {
+        BuyDeal myDeal(uid, volume, cost);
+        while (!myDeal.getIsClosed() && !activeSells.empty() && myDeal.isCompatible(*activeSells.begin())) {
+            SellDeal sell = *activeSells.begin();
+            activeSells.erase(activeSells.begin());
+            long long dealPrice = getDealPrice(myDeal, sell);
+            long long dealVolume = getDealVolume(myDeal, sell);
+            DealPair deals = completeDeals(myDeal, sell);
+
+            if (!userTable.addUsdToUser(myDeal.getUid(), dealVolume) ||
+                !userTable.addRubToUser(myDeal.getUid(), -dealPrice * dealVolume) ||
+                !userTable.addUsdToUser(sell.getUid(), -dealVolume) ||
+                !userTable.addRubToUser(sell.getUid(), dealPrice * dealVolume)) {
+                return Errors::UserDoesntExist;
+            }
+
+            closedDeals[deals.first.getUid()].emplace_back(&deals.first);
+            closedDeals[deals.second.getUid()].emplace_back(&deals.second);
+
+            if (!sell.getIsClosed()) {
+                activeSells.insert(sell);
+            }
+        }
+
+        if (!myDeal.getIsClosed()) {
+            activeBuys.insert(myDeal);
+        }
+
+        return Errors::NoError;
+    }
+
+    std::string TrySell(size_t uid, long long volume, long long cost) {
+        SellDeal myDeal(uid, volume, cost);
+        while (!myDeal.getIsClosed() && !activeBuys.empty() && myDeal.isCompatible(*activeBuys.begin())) {
+            BuyDeal buy = *activeBuys.begin();
+            activeBuys.erase(activeBuys.begin());
+            long long dealPrice = getDealPrice(buy, myDeal);
+            long long dealVolume = getDealVolume(buy, myDeal);
+            DealPair deals = completeDeals(buy, myDeal);
+
+            if (!userTable.addUsdToUser(myDeal.getUid(), -dealVolume) ||
+                !userTable.addRubToUser(myDeal.getUid(), dealPrice * dealVolume) ||
+                !userTable.addUsdToUser(buy.getUid(), dealVolume) ||
+                !userTable.addRubToUser(buy.getUid(), -dealPrice * dealVolume)) {
+                return Errors::UserDoesntExist;
+            }
+
+            closedDeals[deals.first.getUid()].emplace_back(&deals.first);
+            closedDeals[deals.second.getUid()].emplace_back(&deals.second);
+
+            if (!buy.getIsClosed()) {
+                activeBuys.insert(buy);
+            }
+        }
+
+        if (!myDeal.getIsClosed()) {
+            activeSells.insert(myDeal);
+        }
+
+        return Errors::NoError;
+    }
+
+    std::string GetUserBalance(size_t uid) {
+        nlohmann::json msg;
+        if (userTable.isUserInTable(uid)) {
+            msg["err"] = Errors::NoError;
+            msg["rub"] = userTable.getUserRubBalance(uid);
+            msg["usd"] = userTable.getUserUsdBalance(uid);
+        } else {
+            msg["err"] = Errors::UserDoesntExist;
+        }
+        return msg.dump();
+    }
+
 private:
-    // <UserId, UserName>
-    std::map<size_t, std::string> mUsers;
     UserTable userTable;
+    std::multiset<BuyDeal> activeBuys;
+    std::multiset<SellDeal> activeSells;
+    std::unordered_map<size_t, std::vector<std::unique_ptr<Deal>>> closedDeals;
 };
 
 Core& GetCore()
@@ -105,23 +163,24 @@ public:
             auto reqType = j["ReqType"];
 
             std::string reply = "Error! Unknown request type";
-            if (reqType == Requests::Registration) {
-                // Это реквест на регистрацию пользователя.
-                // Добавляем нового пользователя и возвращаем его ID.
-                reply = GetCore().RegisterNewUser(j["Message"]);
-            }
-            else if (reqType == Requests::Hello) {
-                // Это реквест на приветствие.
-                // Находим имя пользователя по ID и приветствуем его по имени.
-                reply = "Hello, " + GetCore().GetUserName(j["UserId"]) + "!\n";
-            }
-            else if (reqType == Requests::Reg) {
-                auto msg = nlohmann::json::parse(static_cast<std::string>(j["Message"]));
+            auto msg = nlohmann::json::parse(static_cast<std::string>(j["Message"]));
+            if (reqType == Requests::Reg) {
                 reply = GetCore().RegisterNewUser(msg["login"], msg["password"]);
             }
             else if (reqType == Requests::Login) {
-                auto msg = nlohmann::json::parse(static_cast<std::string>(j["Message"]));
                 reply = GetCore().TryLogin(msg["login"], msg["password"]);
+            }
+            else if (reqType == Requests::Buy) {
+                std::string uid = msg["uid"];
+                reply = GetCore().TryBuy(std::stoi(uid), msg["vol"], msg["cost"]);
+            }
+            else if (reqType == Requests::Sell) {
+                std::string uid = msg["uid"];
+                reply = GetCore().TrySell(std::stoi(uid), msg["vol"], msg["cost"]);
+            }
+            else if (reqType == Requests::Balance) {
+                std::string uid = msg["uid"];
+                reply = GetCore().GetUserBalance(std::stoi(uid));
             }
 
             boost::asio::async_write(socket_,

@@ -5,6 +5,10 @@ bool UserTable::isUserInTable(std::string login) {
     return logins.find(login) != logins.end();
 }
 
+bool UserTable::isUserInTable(size_t uid) {
+    return users.find(uid) != users.end();
+}
+
 size_t UserTable::getUid(std::string login) {
     return (isUserInTable(login) ? logins.at(login) : 0);
 }
@@ -22,4 +26,30 @@ size_t UserTable::addUser(std::string login, std::string password) {
         return myUid;
     }
     return 0;
+}
+
+bool UserTable::addUsdToUser(size_t uid, long long volume) {
+    if (!isUserInTable(uid)) {
+        return false;
+    }
+
+    users[uid].addUsd(volume);
+    return true;
+}
+
+bool UserTable::addRubToUser(size_t uid, long long volume) {
+    if (!isUserInTable(uid)) {
+        return false;
+    }
+
+    users[uid].addRub(volume);
+    return true;
+}
+
+long long UserTable::getUserUsdBalance(size_t uid) {
+    return users.at(uid).getUsdBalance();
+}
+
+long long UserTable::getUserRubBalance(size_t uid) {
+    return users.at(uid).getRubBalance();
 }
