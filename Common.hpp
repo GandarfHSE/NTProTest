@@ -32,4 +32,9 @@ namespace DealInfo {
     static std::string TypeSell = "s";
 }
 
+namespace Fillers {
+    static std::string FAKE_ID = "fake_id";
+    static std::string FAKE_INFO = "faake_info";
+}
+
 #endif //CLIENSERVERECN_COMMON_HPP

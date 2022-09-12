@@ -7,8 +7,6 @@
 
 using boost::asio::ip::tcp;
 
-const std::string FAKE_ID = "fake_id";
-
 // Отправка сообщения на сервер по шаблону.
 void SendMessage(
     tcp::socket& aSocket,
@@ -66,7 +64,7 @@ std::string RegistrationProcess(tcp::socket& aSocket) {
     else {
         std::cout << "Something strange have occured. Contact administrator. Error: REG_ERROR\n";
     }
-    return FAKE_ID;
+    return Fillers::FAKE_ID;
 }
 
 std::string LoginProcess(tcp::socket& aSocket) {
@@ -95,7 +93,7 @@ std::string LoginProcess(tcp::socket& aSocket) {
     else {
         std::cout << "Something strange have occured. Contact administrator. Error: LOGIN_ERROR\n";
     }
-    return FAKE_ID;
+    return Fillers::FAKE_ID;
 }
 
 void MakeDealProcess(tcp::socket& aSocket, std::string my_id, bool isBuy) {
@@ -182,7 +180,7 @@ int main()
 
         std::string my_id = "fake_id";
 
-        while (my_id == FAKE_ID) {
+        while (my_id == Fillers::FAKE_ID) {
             std::cout << "Greetings! Please, register or login\n"
                          "1) Register new account\n"
                          "2) Login to existing account\n"

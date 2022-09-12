@@ -54,7 +54,7 @@ public:
         return isClosed;
     }
 
-    virtual std::string getInfo() const = 0;
+    virtual std::string getInfo() const;
 
 protected:
     size_t uid;
@@ -90,6 +90,8 @@ public:
 
     }
 
+    bool operator == (const BuyDeal& rhs) const;
+
     bool operator < (const BuyDeal& rhs) const;
 
     bool isCompatible(const SellDeal deal) const;
@@ -120,6 +122,8 @@ public:
                                            other.getTime()) {
 
     }
+
+    bool operator == (const SellDeal& rhs) const;
 
     bool operator < (const SellDeal& rhs) const;
 

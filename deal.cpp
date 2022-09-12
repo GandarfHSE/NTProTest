@@ -1,9 +1,23 @@
-#include "deal.h"
 #include <chrono>
 #include <exception>
 #include <stdexcept>
 
+#include "deal.h"
+#include "Common.hpp"
+
+std::string Deal::getInfo() const {
+    return Fillers::FAKE_INFO;
+}
+
 // BuyDeal
+
+bool BuyDeal::operator == (const BuyDeal& rhs) const {
+    return uid      == rhs.uid      &&
+           price    == rhs.price    &&
+           volume   == rhs.volume   &&
+           dealTime == rhs.dealTime &&
+           isClosed == rhs.isClosed;
+}
 
 bool BuyDeal::operator< (const BuyDeal& rhs) const {
     if (price != rhs.price) {
@@ -16,7 +30,7 @@ bool BuyDeal::operator< (const BuyDeal& rhs) const {
 }
 
 bool BuyDeal::isCompatible(const SellDeal deal) const {
-    return price <= deal.getPrice();
+    return price >= deal.getPrice();
 }
 
 std::string BuyDeal::getInfo() const {
@@ -29,6 +43,14 @@ std::string BuyDeal::getInfo() const {
 
 // SellDeal
 
+bool SellDeal::operator == (const SellDeal& rhs) const {
+    return uid      == rhs.uid      &&
+           price    == rhs.price    &&
+           volume   == rhs.volume   &&
+           dealTime == rhs.dealTime &&
+           isClosed == rhs.isClosed;
+}
+
 bool SellDeal::operator< (const SellDeal& rhs) const {
     if (price != rhs.price) {
         return price < rhs.price;
@@ -40,7 +62,7 @@ bool SellDeal::operator< (const SellDeal& rhs) const {
 }
 
 bool SellDeal::isCompatible(const BuyDeal deal) const {
-    return price >= deal.getPrice();
+    return price <= deal.getPrice();
 }
 
 std::string SellDeal::getInfo() const {
