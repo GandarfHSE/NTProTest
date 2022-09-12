@@ -171,20 +171,20 @@ void PrintDeals(tcp::socket& aSocket, std::string my_id, bool is_active) {
 }
 
 void GetBestPrices(tcp::socket& aSocket) {
-    SendMessage(aSocket, Requests::BestPrices, "");
+    SendMessage(aSocket, Requests::BestPrices, "{}");
     auto reply = nlohmann::json::parse(ReadMessage(aSocket));
     std::cout << "Best current prices:\n";
 
     if (reply["buy"] == Fillers::FAKE_NUMBER) {
         std::cout << "There's no active buy request\n";
     } else {
-        std::cout << "Best buy price is " << reply["buy"] << " RUB for 1 USD\n";
+        std::cout << "Best buy price is " << std::stoll(static_cast<std::string>(reply["buy"])) << " RUB for 1 USD\n";
     }
 
     if (reply["sell"] == Fillers::FAKE_NUMBER) {
         std::cout << "There's no active sell request\n";
     } else {
-        std::cout << "Best sell price is " << reply["sell"] << " RUB for 1 USD\n";
+        std::cout << "Best sell price is " << std::stoll(static_cast<std::string>(reply["sell"])) << " RUB for 1 USD\n";
     }
 }
 
