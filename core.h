@@ -26,6 +26,8 @@ public:
 
     std::string GetUserClosedDeals(size_t uid);
 
+    std::string GetBestPrices();
+
 private:
     UserTable userTable;
     std::multiset<BuyDeal> activeBuys;

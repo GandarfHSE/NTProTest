@@ -154,14 +154,37 @@ void PrintDeals(tcp::socket& aSocket, std::string my_id, bool is_active) {
     SendMessage(aSocket, (is_active ? Requests::ActiveDeals : Requests::ClosedDeals), msg.dump());
     auto reply = nlohmann::json::parse(ReadMessage(aSocket));
     if (reply["err"] == Errors::NoError) {
-        std::cout << (is_active ? "Your active deals:\n" : "Your closed deals:\n");
-        int i = 1;
-        for (auto& str : reply["deals"]) {
-            std::cout << i++ << ") ";
-            PrintDeal(str);
+        if (reply["deals"].empty()) {
+            std::cout << "You have no " << (is_active ? "active" : "closed") << " deals now\n";
+        }
+        else {
+            std::cout << (is_active ? "Your active deals:\n" : "Your closed deals:\n");
+            int i = 1;
+            for (auto& str : reply["deals"]) {
+                std::cout << i++ << ") ";
+                PrintDeal(str);
+            }
         }
     } else {
         std::cout << "Something strange have occured. Contact administrator. Error: PRINTDEALS_ERROR\n";
+    }
+}
+
+void GetBestPrices(tcp::socket& aSocket) {
+    SendMessage(aSocket, Requests::BestPrices, "");
+    auto reply = nlohmann::json::parse(ReadMessage(aSocket));
+    std::cout << "Best current prices:\n";
+
+    if (reply["buy"] == Fillers::FAKE_NUMBER) {
+        std::cout << "There's no active buy request\n";
+    } else {
+        std::cout << "Best buy price is " << reply["buy"] << " RUB for 1 USD\n";
+    }
+
+    if (reply["sell"] == Fillers::FAKE_NUMBER) {
+        std::cout << "There's no active sell request\n";
+    } else {
+        std::cout << "Best sell price is " << reply["sell"] << " RUB for 1 USD\n";
     }
 }
 
@@ -215,28 +238,32 @@ int main()
                          "3) Check balance\n"
                          "4) Check my active deals\n"
                          "5) Check my closed deals\n"
+                         "6) Check best prices\n"
                          "0) Exit\n"
                       << std::endl;
 
             short menu_option;
             std::cin >> menu_option;
 
-            if (menu_option == 1) {         // Buy
+            if (menu_option == 1) {                         // Buy
                 MakeDealProcess(s, my_id, /*isBuy = */ true);
             }
-            else if (menu_option == 2) {    // Sell
+            else if (menu_option == 2) {                    // Sell
                 MakeDealProcess(s, my_id, /*isBuy = */ false);
             }
-            else if (menu_option == 3) {    // Check balance
+            else if (menu_option == 3) {                    // Check balance
                 CheckBalance(s, my_id);
             }
-            else if (menu_option == 4) {    // Check active deals
+            else if (menu_option == 4) {                    // Check active deals
                 PrintDeals(s, my_id, /*isActive = */ true);
             }
-            else if (menu_option == 5) {    // Check closed deals
+            else if (menu_option == 5) {                    // Check closed deals
                 PrintDeals(s, my_id, /*isActive = */ false);
             }
-            else if (menu_option == 0) {    // Exit
+            else if (menu_option == 6) {                    // Check best prices
+                GetBestPrices(s);
+            }
+            else if (menu_option == 0) {                    // Exit
                 std::cout << "Exit successfully\n";
                 exit(0);
             }

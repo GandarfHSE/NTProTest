@@ -76,6 +76,9 @@ public:
                 std::string uid = msg["uid"];
                 reply = GetCore().GetUserClosedDeals(std::stoi(uid));
             }
+            else if (reqType == Requests::BestPrices) {
+                reply = GetCore().GetBestPrices();
+            }
 
             boost::asio::async_write(socket_,
                 boost::asio::buffer(reply, reply.size()),

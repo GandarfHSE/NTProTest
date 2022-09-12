@@ -14,6 +14,7 @@ namespace Requests
     static std::string Balance = "bal";
     static std::string ActiveDeals = "ad";
     static std::string ClosedDeals = "cd";
+    static std::string BestPrices = "bp";
 }
 
 namespace Errors {
@@ -34,7 +35,8 @@ namespace DealInfo {
 
 namespace Fillers {
     static std::string FAKE_ID = "fake_id";
-    static std::string FAKE_INFO = "faake_info";
+    static std::string FAKE_INFO = "fake_info";
+    static std::string FAKE_NUMBER = "fake_number";
 }
 
 #endif //CLIENSERVERECN_COMMON_HPP

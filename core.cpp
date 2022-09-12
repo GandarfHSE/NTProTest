@@ -145,6 +145,23 @@ std::string Core::GetUserClosedDeals(size_t uid) {
     return msg.dump();
 }
 
+std::string Core::GetBestPrices() {
+    nlohmann::json msg;
+    if (!activeBuys.empty()) {
+        msg["buy"] = std::to_string(activeBuys.begin()->getPrice());
+    } else {
+        msg["buy"] = Fillers::FAKE_NUMBER;
+    }
+
+    if (!activeSells.empty()) {
+        msg["sell"] = std::to_string(activeSells.begin()->getPrice());
+    } else {
+        msg["sell"] = Fillers::FAKE_NUMBER;
+    }
+
+    return msg.dump();
+}
+
 Core& GetCore() {
     static Core core;
     return core;

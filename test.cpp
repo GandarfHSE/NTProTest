@@ -1,6 +1,5 @@
 #include <cassert>
 #include <chrono>
-#include <iostream>
 #include <thread>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
@@ -465,4 +464,29 @@ TEST_CASE("Test deals info") {
         CHECK(msg["deals"].size() == 1);
         CHECK(msg["deals"][0] == remainder.getInfo());
     }
+}
+
+TEST_CASE("Test GetBestPrices") {
+    Core core;
+    core.RegisterNewUser("login1", "pass1");
+    core.RegisterNewUser("login2", "pass2");
+
+    auto msg = nlohmann::json::parse(core.GetBestPrices());
+    CHECK(msg["buy"] == Fillers::FAKE_NUMBER);
+    CHECK(msg["sell"] == Fillers::FAKE_NUMBER);
+
+    core.TryBuy(1, 10, 10);
+    msg = nlohmann::json::parse(core.GetBestPrices());
+    CHECK(msg["buy"] == "10");
+    CHECK(msg["sell"] == Fillers::FAKE_NUMBER);
+
+    core.TrySell(2, 10, 11);
+    msg = nlohmann::json::parse(core.GetBestPrices());
+    CHECK(msg["buy"] == "10");
+    CHECK(msg["sell"] == "11");
+
+    core.TrySell(2, 10, 10);
+    msg = nlohmann::json::parse(core.GetBestPrices());
+    CHECK(msg["buy"] == Fillers::FAKE_NUMBER);
+    CHECK(msg["sell"] == "11");
 }
