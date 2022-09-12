@@ -7,6 +7,7 @@
 #include "json.hpp"
 
 #include "Common.hpp"
+#include "core.h"
 #include "deal.h"
 #include "User.h"
 

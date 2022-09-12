@@ -2,8 +2,8 @@
 #include <exception>
 #include <stdexcept>
 
-#include "deal.h"
 #include "Common.hpp"
+#include "deal.h"
 
 std::string Deal::getInfo() const {
     return Fillers::FAKE_INFO;
