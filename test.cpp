@@ -1,6 +1,7 @@
 #include <cassert>
 #include <chrono>
 #include <iostream>
+#include <thread>
 
 #define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest.h"
@@ -265,5 +266,203 @@ TEST_CASE("Test Deal functions") {
             CHECK(sell.getVolume() == dealVolume);
             CHECK(deals.second == sell);
         }
+    }
+}
+
+TEST_CASE("Test registration and login") {
+    Core core;
+    std::string login = "Gandarf", password = "qwerty";
+    std::string another_login = "login", another_password = "123456";
+    
+    SUBCASE("Test multiple registrations") {
+        auto msg = nlohmann::json::parse(core.RegisterNewUser(login, password));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["uid"] == "1");
+
+        msg = nlohmann::json::parse(core.RegisterNewUser(login, password));
+        CHECK(msg["err"] == Errors::LoginExists);
+
+        msg = nlohmann::json::parse(core.RegisterNewUser(login, another_password));
+        CHECK(msg["err"] == Errors::LoginExists);
+
+        msg = nlohmann::json::parse(core.RegisterNewUser(another_login, password));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["uid"] == "2");
+    }
+
+    SUBCASE("Test registration and login") {
+        auto msg = nlohmann::json::parse(core.RegisterNewUser(login, password));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["uid"] == "1");
+
+        msg = nlohmann::json::parse(core.TryLogin(another_login, password));
+        CHECK(msg["err"] == Errors::LoginDoesntExist);
+
+        msg = nlohmann::json::parse(core.TryLogin(login, another_password));
+        CHECK(msg["err"] == Errors::WrongPass);
+
+        msg = nlohmann::json::parse(core.TryLogin(login, password));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["uid"] == "1");
+    }
+}
+
+TEST_CASE("Test buy/sell") {
+    Core core;
+    core.RegisterNewUser("login1", "pass1");
+    core.RegisterNewUser("login2", "pass2");
+
+    SUBCASE("Test casual GetUserBalance") {
+        auto msg = nlohmann::json::parse(core.GetUserBalance(42));
+        CHECK(msg["err"] == Errors::UserDoesntExist);
+
+        msg = nlohmann::json::parse(core.GetUserBalance(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["rub"] == 0);
+        CHECK(msg["usd"] == 0);
+    }
+
+    SUBCASE("Test sell/buy") {
+        core.TryBuy(1, 10, 10);
+        core.TrySell(2, 10, 10);
+
+        auto msg = nlohmann::json::parse(core.GetUserBalance(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["rub"] == -100);
+        CHECK(msg["usd"] == 10);
+
+        msg = nlohmann::json::parse(core.GetUserBalance(2));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["rub"] == 100);
+        CHECK(msg["usd"] == -10);
+    }
+
+    SUBCASE("Test sell/buy with different prices") {
+        SUBCASE("Buy first") {
+            core.TryBuy(1, 10, 10);
+            // Price between two deals is dependent on deal time, so sleep a bit for confidence
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            core.TrySell(2, 10, 9);
+
+            auto msg = nlohmann::json::parse(core.GetUserBalance(1));
+            CHECK(msg["err"] == Errors::NoError);
+            CHECK(msg["rub"] == -100);
+            CHECK(msg["usd"] == 10);
+
+            msg = nlohmann::json::parse(core.GetUserBalance(2));
+            CHECK(msg["err"] == Errors::NoError);
+            CHECK(msg["rub"] == 100);
+            CHECK(msg["usd"] == -10);
+        }
+
+        SUBCASE("Sell first") {
+            core.TrySell(2, 10, 9);
+            // Price between two deals is dependent on deal time, so sleep a bit for confidence
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            core.TryBuy(1, 10, 10);
+
+            auto msg = nlohmann::json::parse(core.GetUserBalance(1));
+            CHECK(msg["err"] == Errors::NoError);
+            CHECK(msg["rub"] == -90);
+            CHECK(msg["usd"] == 10);
+
+            msg = nlohmann::json::parse(core.GetUserBalance(2));
+            CHECK(msg["err"] == Errors::NoError);
+            CHECK(msg["rub"] == 90);
+            CHECK(msg["usd"] == -10);
+        }
+    }
+
+    SUBCASE("Test partial sell/buy") {
+        core.TryBuy(1, 10, 10);
+        core.TrySell(2, 5, 10);
+
+        auto msg = nlohmann::json::parse(core.GetUserBalance(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["rub"] == -50);
+        CHECK(msg["usd"] == 5);
+
+        msg = nlohmann::json::parse(core.GetUserBalance(2));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["rub"] == 50);
+        CHECK(msg["usd"] == -5);
+    }
+}
+
+TEST_CASE("Test deals info") {
+    Core core;
+    core.RegisterNewUser("login1", "pass1");
+    core.RegisterNewUser("login2", "pass2");
+
+    SUBCASE("Test ActiveDeals info") {
+        auto msg = nlohmann::json::parse(core.GetUserActiveDeals(42));
+        CHECK(msg["err"] == Errors::UserDoesntExist);
+
+        msg = nlohmann::json::parse(core.GetUserActiveDeals(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 0);
+
+        BuyDeal buyDeal(1, 10, 10);
+        core.TryBuy(1, 10, 10);
+        msg = nlohmann::json::parse(core.GetUserActiveDeals(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 1);
+        CHECK(msg["deals"][0] == buyDeal.getInfo());
+
+        SellDeal sellDeal(1, 10, 11);
+        core.TrySell(1, 10, 11);
+        msg = nlohmann::json::parse(core.GetUserActiveDeals(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 2);
+        CHECK(msg["deals"][0] == buyDeal.getInfo());
+        CHECK(msg["deals"][1] == sellDeal.getInfo());
+    }
+
+    SUBCASE("Test ClosedDeals info") {
+        auto msg = nlohmann::json::parse(core.GetUserClosedDeals(42));
+        CHECK(msg["err"] == Errors::UserDoesntExist);
+
+        msg = nlohmann::json::parse(core.GetUserClosedDeals(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 0);
+
+        BuyDeal buyDeal(1, 10, 10);
+        core.TryBuy(1, 10, 10);
+        SellDeal sellDeal(2, 10, 10);
+        core.TrySell(2, 10, 10);
+
+        msg = nlohmann::json::parse(core.GetUserClosedDeals(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 1);
+        CHECK(msg["deals"][0] == buyDeal.getInfo());
+
+        msg = nlohmann::json::parse(core.GetUserClosedDeals(2));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 1);
+        CHECK(msg["deals"][0] == sellDeal.getInfo());
+    }
+
+    SUBCASE("Test deals info with partial deal") {
+        BuyDeal buyDeal(1, 10, 10);
+        core.TryBuy(1, 10, 10);
+        SellDeal sellDeal(2, 4, 10);
+        core.TrySell(2, 4, 10);
+
+        BuyDeal closedBuyDeal(1, 4, 10);
+        auto msg = nlohmann::json::parse(core.GetUserClosedDeals(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 1);
+        CHECK(msg["deals"][0] == closedBuyDeal.getInfo());
+
+        msg = nlohmann::json::parse(core.GetUserClosedDeals(2));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 1);
+        CHECK(msg["deals"][0] == sellDeal.getInfo());
+
+        BuyDeal remainder(1, 6, 10);
+        msg = nlohmann::json::parse(core.GetUserActiveDeals(1));
+        CHECK(msg["err"] == Errors::NoError);
+        CHECK(msg["deals"].size() == 1);
+        CHECK(msg["deals"][0] == remainder.getInfo());
     }
 }

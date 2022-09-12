@@ -145,7 +145,7 @@ void PrintDeal(std::string jsonStr) {       // jsonStr - dumped json from deal.g
     } else {
         std::cout << "Sell ";
     }
-    std::cout << info[DealInfo::KeyVolume] << " USD for " << info[DealInfo::KeyPrice] << " RUB\n";
+    std::cout << info[DealInfo::KeyVolume] << " USD for " << info[DealInfo::KeyPrice] << " RUB each\n";
 }
 
 void PrintDeals(tcp::socket& aSocket, std::string my_id, bool is_active) {
@@ -156,7 +156,7 @@ void PrintDeals(tcp::socket& aSocket, std::string my_id, bool is_active) {
     if (reply["err"] == Errors::NoError) {
         std::cout << (is_active ? "Your active deals:\n" : "Your closed deals:\n");
         int i = 1;
-        for (auto& str : msg["deals"]) {
+        for (auto& str : reply["deals"]) {
             std::cout << i++ << ") ";
             PrintDeal(str);
         }

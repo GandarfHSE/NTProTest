@@ -52,8 +52,8 @@ std::string Core::TryBuy(size_t uid, long long volume, long long cost) {
             return Errors::UserDoesntExist;
         }
 
-        closedDeals[deals.first.getUid()].emplace_back(&deals.first);
-        closedDeals[deals.second.getUid()].emplace_back(&deals.second);
+        closedDeals[deals.first.getUid()].emplace_back(new BuyDeal(deals.first));
+        closedDeals[deals.second.getUid()].emplace_back(new SellDeal(deals.second));
 
         if (!sell.getIsClosed()) {
             activeSells.insert(sell);
@@ -83,8 +83,8 @@ std::string Core::TrySell(size_t uid, long long volume, long long cost) {
             return Errors::UserDoesntExist;
         }
 
-        closedDeals[deals.first.getUid()].emplace_back(&deals.first);
-        closedDeals[deals.second.getUid()].emplace_back(&deals.second);
+        closedDeals[deals.first.getUid()].emplace_back(new BuyDeal(deals.first));
+        closedDeals[deals.second.getUid()].emplace_back(new SellDeal(deals.second));
 
         if (!buy.getIsClosed()) {
             activeBuys.insert(buy);
