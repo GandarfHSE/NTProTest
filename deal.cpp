@@ -21,9 +21,9 @@ bool BuyDeal::isCompatible(const SellDeal deal) const {
 
 std::string BuyDeal::getInfo() const {
     nlohmann::json info;
-    info["t"] = "b";
-    info["v"] = getVolume();
-    info["p"] = getPrice();
+    info[DealInfo::KeyType] = DealInfo::TypeBuy;
+    info[DealInfo::KeyVolume] = getVolume();
+    info[DealInfo::KeyPrice] = getPrice();
     return info.dump();
 }
 
@@ -45,9 +45,9 @@ bool SellDeal::isCompatible(const BuyDeal deal) const {
 
 std::string SellDeal::getInfo() const {
     nlohmann::json info;
-    info["t"] = "s";
-    info["v"] = getVolume();
-    info["p"] = getPrice();
+    info[DealInfo::KeyType] = DealInfo::TypeSell;
+    info[DealInfo::KeyVolume] = getVolume();
+    info[DealInfo::KeyPrice] = getPrice();
     return info.dump();
 }
 

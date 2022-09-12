@@ -33,7 +33,7 @@ std::string ReadMessage(tcp::socket& aSocket)
     return line;
 }
 
-std::string RegistrationOption(tcp::socket& aSocket) {
+std::string RegistrationProcess(tcp::socket& aSocket) {
     std::string name, pass, pass2;
     std::cout << "Enter your login: ";
     std::cin >> name;
@@ -69,7 +69,7 @@ std::string RegistrationOption(tcp::socket& aSocket) {
     return FAKE_ID;
 }
 
-std::string LoginOption(tcp::socket& aSocket) {
+std::string LoginProcess(tcp::socket& aSocket) {
     std::string name, pass;
     std::cout << "Enter your login: ";
     std::cin >> name;
@@ -98,7 +98,7 @@ std::string LoginOption(tcp::socket& aSocket) {
     return FAKE_ID;
 }
 
-void MakeDealOption(tcp::socket& aSocket, std::string my_id, bool isBuy) {
+void MakeDealProcess(tcp::socket& aSocket, std::string my_id, bool isBuy) {
     long long volume, cost;
     if (isBuy) {
         std::cout << "Creating buy request...\n";
@@ -127,7 +127,7 @@ void MakeDealOption(tcp::socket& aSocket, std::string my_id, bool isBuy) {
     }
 }
 
-void CheckBalanceOption(tcp::socket& aSocket, std::string my_id) {
+void CheckBalance(tcp::socket& aSocket, std::string my_id) {
     nlohmann::json msg;
     msg["uid"] = my_id;
     SendMessage(aSocket, Requests::Balance, msg.dump());
@@ -137,6 +137,33 @@ void CheckBalanceOption(tcp::socket& aSocket, std::string my_id) {
     }
     else {
         std::cout << "Something strange have occured. Contact administrator. Error: BALANCE_ERROR\n";
+    }
+}
+
+void PrintDeal(std::string jsonStr) {       // jsonStr - dumped json from deal.getInfo()
+    auto info = nlohmann::json::parse(jsonStr);
+    if (info[DealInfo::KeyType] == DealInfo::TypeBuy) {
+        std::cout << "Buy ";
+    } else {
+        std::cout << "Sell ";
+    }
+    std::cout << info[DealInfo::KeyVolume] << " USD for " << info[DealInfo::KeyPrice] << " RUB\n";
+}
+
+void PrintDeals(tcp::socket& aSocket, std::string my_id, bool is_active) {
+    nlohmann::json msg;
+    msg["uid"] = my_id;
+    SendMessage(aSocket, (is_active ? Requests::ActiveDeals : Requests::ClosedDeals), msg.dump());
+    auto reply = nlohmann::json::parse(ReadMessage(aSocket));
+    if (reply["err"] == Errors::NoError) {
+        std::cout << (is_active ? "Your active deals:\n" : "Your closed deals:\n");
+        int i = 1;
+        for (auto& str : msg["deals"]) {
+            std::cout << i++ << ") ";
+            PrintDeal(str);
+        }
+    } else {
+        std::cout << "Something strange have occured. Contact administrator. Error: PRINTDEALS_ERROR\n";
     }
 }
 
@@ -166,12 +193,12 @@ int main()
             switch (menu_option) {
                 case 1:
                 {
-                    my_id = RegistrationOption(s);
+                    my_id = RegistrationProcess(s);
                     break;
                 }
                 case 2:
                 {
-                    my_id = LoginOption(s);
+                    my_id = LoginProcess(s);
                     break;
                 }
                 default:
@@ -185,40 +212,40 @@ int main()
         while (true)
         {
             std::cout << "Please, choose menu option:\n"
-                         "1) Exit\n"
-                         "2) Buy USD\n"
-                         "3) Sell USD\n"
-                         "4) Check balance\n"
+                         "1) Buy USD\n"
+                         "2) Sell USD\n"
+                         "3) Check balance\n"
+                         "4) Check my active deals\n"
+                         "5) Check my closed deals\n"
+                         "0) Exit\n"
                       << std::endl;
 
             short menu_option;
             std::cin >> menu_option;
-            switch (menu_option) {
-                case 1:     // Exit
-                {
-                    std::cout << "Exit successfully\n";
-                    exit(0);
-                }
-                case 2:     // Buy
-                {
-                    MakeDealOption(s, my_id, /*isBuy = */ true);
-                    break;
-                }
-                case 3:     // Sell
-                {
-                    MakeDealOption(s, my_id, /*isBuy = */ false);
-                    break;
-                }
-                case 4:
-                {
-                    CheckBalanceOption(s, my_id);
-                    break;
-                }
-                default:
-                {
-                    std::cout << "Unknown menu option\n";
-                }
+
+            if (menu_option == 1) {         // Buy
+                MakeDealProcess(s, my_id, /*isBuy = */ true);
             }
+            else if (menu_option == 2) {    // Sell
+                MakeDealProcess(s, my_id, /*isBuy = */ false);
+            }
+            else if (menu_option == 3) {    // Check balance
+                CheckBalance(s, my_id);
+            }
+            else if (menu_option == 4) {    // Check active deals
+                PrintDeals(s, my_id, /*isActive = */ true);
+            }
+            else if (menu_option == 5) {    // Check closed deals
+                PrintDeals(s, my_id, /*isActive = */ false);
+            }
+            else if (menu_option == 0) {    // Exit
+                std::cout << "Exit successfully\n";
+                exit(0);
+            }
+            else {
+                std::cout << "Unknown menu option\n";
+            }
+
             std::cout << "\n----------------------------------------------------\n";
         }
     }

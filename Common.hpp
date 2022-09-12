@@ -12,6 +12,8 @@ namespace Requests
     static std::string Buy = "buy";
     static std::string Sell = "sell";
     static std::string Balance = "bal";
+    static std::string ActiveDeals = "ad";
+    static std::string ClosedDeals = "cd";
 }
 
 namespace Errors {
@@ -20,6 +22,14 @@ namespace Errors {
     static std::string LoginDoesntExist = "trevor";
     static std::string UserDoesntExist = "404";
     static std::string WrongPass = "wrongpass";
+}
+
+namespace DealInfo {
+    static std::string KeyType = "t";
+    static std::string KeyVolume = "v";
+    static std::string KeyPrice = "p";
+    static std::string TypeBuy = "b";
+    static std::string TypeSell = "s";
 }
 
 #endif //CLIENSERVERECN_COMMON_HPP

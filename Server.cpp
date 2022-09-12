@@ -117,6 +117,43 @@ public:
         return msg.dump();
     }
 
+    std::string GetUserActiveDeals(size_t uid) {
+        nlohmann::json msg;
+        if (userTable.isUserInTable(uid)) {
+            msg["err"] = Errors::NoError;
+
+            for (auto& deal : activeBuys) {
+                if (deal.getUid() == uid) {
+                    msg["deals"].push_back(deal.getInfo());
+                }
+            }
+            for (auto& deal : activeSells) {
+                if (deal.getUid() == uid) {
+                    msg["deals"].push_back(deal.getInfo());
+                }
+            }
+        }
+        else {
+            msg["err"] = Errors::UserDoesntExist;
+        }
+        return msg.dump();
+    }
+
+    std::string GetUserClosedDeals(size_t uid) {
+        nlohmann::json msg;
+        if (userTable.isUserInTable(uid)) {
+            msg["err"] = Errors::NoError;
+
+            for (auto& dealPtr : closedDeals[uid]) {
+                msg["deals"].push_back(dealPtr->getInfo());
+            }
+        }
+        else {
+            msg["err"] = Errors::UserDoesntExist;
+        }
+        return msg.dump();
+    }
+
 private:
     UserTable userTable;
     std::multiset<BuyDeal> activeBuys;
@@ -181,6 +218,14 @@ public:
             else if (reqType == Requests::Balance) {
                 std::string uid = msg["uid"];
                 reply = GetCore().GetUserBalance(std::stoi(uid));
+            }
+            else if (reqType == Requests::ActiveDeals) {
+                std::string uid = msg["uid"];
+                reply = GetCore().GetUserActiveDeals(std::stoi(uid));
+            }
+            else if (reqType == Requests::ClosedDeals) {
+                std::string uid = msg["uid"];
+                reply = GetCore().GetUserClosedDeals(std::stoi(uid));
             }
 
             boost::asio::async_write(socket_,
