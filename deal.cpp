@@ -77,27 +77,26 @@ std::string SellDeal::getInfo() const {
 // Return two closed deals
 DealPair completeDeals(BuyDeal& buy, SellDeal& sell) {
     long long minVolume = getDealVolume(buy, sell);
+    long long dealPrice = getDealPrice(buy, sell);
     DealPair res(buy, sell);
 
     if (buy.getVolume() == minVolume) {
         buy.close();
-        res.first = buy;
     } else {
-        BuyDeal closedDeal(buy, minVolume);
         buy.subVolume(minVolume);
-        closedDeal.close();
-        res.first = closedDeal;
     }
+
+    res.first = BuyDeal(buy.getUid(), minVolume, dealPrice, buy.getTime());
+    res.first.close();
 
     if (sell.getVolume() == minVolume) {
         sell.close();
-        res.second = sell;
     } else {
-        SellDeal closedDeal(sell, minVolume);
         sell.subVolume(minVolume);
-        closedDeal.close();
-        res.second = closedDeal;
     }
+
+    res.second = SellDeal(sell.getUid(), minVolume, dealPrice, sell.getTime());
+    res.second.close();
 
     return res;
 }

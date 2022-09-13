@@ -76,13 +76,6 @@ public:
 
     }
 
-    BuyDeal(const BuyDeal& other, long long volume) : Deal(other.getUid(),
-                                                           volume,
-                                                           other.getPrice(),
-                                                           other.getTime()) {
-
-    }
-
     BuyDeal(const BuyDeal& other) : Deal(other.getUid(),
                                          other.getVolume(),
                                          other.getPrice(),
@@ -106,13 +99,6 @@ public:
     }
 
     SellDeal(size_t uid, long long volume, long long price, Time time) : Deal(uid, volume, price, time) {
-
-    }
-
-    SellDeal(const SellDeal& other, long long volume) : Deal(other.getUid(),
-                                                             volume,
-                                                             other.getPrice(),
-                                                             other.getTime()) {
 
     }
 
